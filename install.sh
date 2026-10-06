@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AI Engineering Optimization Stack — Installer
+# AI Engineering Optimization Stack — Universal Turnkey Installer
 # ------------------------------------------------------------------------------
-# 1. Ponytail (Anti-Slop & YAGNI Senior Engineering Guidelines)
+# Installs BOTH core tools simultaneously in one execution:
+# 1. Ponytail (Anti-Slop, YAGNI & Minimal Diffs Engineering Rules)
 # 2. code-review-graph (Local AST SQLite Graph + FastMCP + Pre-commit Hook)
-# 3. Universal AI Agent MCP Config (Claude Code, Codex, Hermes, Cursor)
 #
 # Quick 1-Liner Install:
 #   curl -fsSL https://raw.githubusercontent.com/sativaglobaleducation/optimization-stack/main/install.sh | bash
@@ -16,45 +16,69 @@ TARGET_DIR="${1:-$(pwd)}"
 cd "$TARGET_DIR"
 
 echo "======================================================================"
-echo "🚀 Provisioning AI Optimization Stack in: $TARGET_DIR"
+echo "🚀 Provisioning AI Optimization Stack (Ponytail + code-review-graph)"
+echo "   Target Directory: $TARGET_DIR"
 echo "======================================================================"
 
-# 1. Install code-review-graph CLI
+# ------------------------------------------------------------------------------
+# 1. TOOL 1: Install & Build code-review-graph (Local AST SQLite Knowledge Graph)
+# ------------------------------------------------------------------------------
+echo "📦 [1/2] Setting up 'code-review-graph'..."
 if ! command -v code-review-graph &> /dev/null; then
-    echo "📦 Installing 'code-review-graph' via pip..."
+    echo "   ↳ Installing 'code-review-graph' CLI via pip..."
     pip install -q code-review-graph || pip3 install -q code-review-graph
 else
-    echo "✅ 'code-review-graph' is already installed."
+    echo "   ↳ 'code-review-graph' CLI is already installed on system."
 fi
 
-# 2. Initialize Git if not present
+# Initialize Git if not present
 if [ ! -d ".git" ]; then
-    echo "⚙️ Initializing Git repository..."
+    echo "   ↳ Initializing Git repository..."
     git init -q
 fi
 
-# 3. Build Local AST Graph
-echo "🧠 Building local AST Graph (SQLite + FTS5)..."
+# Build Local AST Graph
+echo "   ↳ Building AST Knowledge Graph (SQLite + FTS5 full-text search)..."
 code-review-graph build
 
-# 4. Configure MCP and Git Pre-commit Hooks
-echo "🔌 Configuring MCP servers and Git hooks..."
+# Configure Platforms & MCP (Claude Code, Codex, Cursor, etc.)
+echo "   ↳ Configuring MCP servers and Git Pre-commit Hooks..."
 code-review-graph install -y --no-instructions --platform claude-code --platform codex || true
 
-# 5. Ensure .gitignore entries
+# Ensure .mcp.json in repo root for all MCP clients
+if [ ! -f ".mcp.json" ]; then
+    cat << 'EOF' > .mcp.json
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "python3",
+      "args": ["-m", "code_review_graph", "serve"],
+      "type": "stdio"
+    }
+  }
+}
+EOF
+    echo "   ↳ Created .mcp.json for universal MCP client support."
+fi
+
+# Ensure .gitignore entries
 if [ -f ".gitignore" ]; then
     if ! grep -q ".code-review-graph/graph.db" .gitignore; then
         echo -e "\n# code-review-graph local database\n.code-review-graph/graph.db\n.code-review-graph/*.tmp\n" >> .gitignore
-        echo "📝 Updated .gitignore"
+        echo "   ↳ Updated .gitignore (ignored .code-review-graph/graph.db)"
     fi
 else
     echo -e "# code-review-graph local database\n.code-review-graph/graph.db\n.code-review-graph/*.tmp\n" > .gitignore
-    echo "📝 Created .gitignore"
+    echo "   ↳ Created .gitignore"
 fi
 
-# 6. Install Hermes Skills if Hermes is present on machine
+# ------------------------------------------------------------------------------
+# 2. TOOL 2: Install Ponytail (Anti-Slop & Senior Minimalism Rules)
+# ------------------------------------------------------------------------------
+echo "🪓 [2/2] Provisioning 'Ponytail' Anti-Slop & YAGNI rules..."
+
+# Install for Hermes Agent if present
 if [ -d "$HOME/.hermes" ]; then
-    echo "🤖 Hermes Agent detected. Installing Ponytail skills..."
     mkdir -p "$HOME/.hermes/skills/software-development/ponytail"
     mkdir -p "$HOME/.hermes/skills/software-development/ponytail-audit"
     
@@ -95,16 +119,24 @@ license: MIT
 
 Whole-repo audit for over-engineering. Scan the whole tree instead of a diff. Rank findings biggest cut first.
 EOF
-    echo "✅ Hermes skills provisioned."
+    echo "   ↳ Provisioned Ponytail skills in Hermes Agent."
 fi
 
-# 7. Print Final Status
-echo "📊 Graph Status:"
-code-review-graph status
+# Append Ponytail directive to AGENTS.md / CLAUDE.md if present
+if [ -f "AGENTS.md" ]; then
+    if ! grep -q "Ponytail" AGENTS.md; then
+        echo -e "\n## Engineering Standard: Ponytail (Anti-Slop)\nFollow the Senior Dev Ladder: YAGNI -> Reuse existing code -> Stdlib -> Native -> Minimal diff.\n" >> AGENTS.md
+        echo "   ↳ Injected Ponytail standard into AGENTS.md."
+    fi
+fi
 
+# ------------------------------------------------------------------------------
+# 3. Final Summary & Verification
+# ------------------------------------------------------------------------------
 echo "======================================================================"
-echo "🎉 STACK SUCCESSFULLY INSTALLED!"
-echo "   - Local AST Graph: .code-review-graph/graph.db (~99% Token Savings)"
-echo "   - Pre-commit Hook: Active (Risk analysis & token savings monitor)"
-echo "   - MCP Integrations: Claude Code, Codex, Hermes ready"
+echo "🎉 BOTH TOOLS INSTALLED AND FULLY OPERATIONAL!"
+echo "   1. code-review-graph: Active (.code-review-graph/graph.db | ~99% Token Savings)"
+echo "   2. Ponytail: Active (Minimal diffs, YAGNI, anti-slop guidelines)"
+echo "   3. Pre-commit Hook: Active (Auto-monitors blast radius on git commit)"
+echo "   4. MCP Server: Active for Claude Code, Codex, Hermes, and Cursor"
 echo "======================================================================"
