@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AI Engineering Optimization Stack — Universal Turnkey Installer
+# AI Engineering Optimization Stack — Universal Turnkey Installer (VPS Hardened)
 # ------------------------------------------------------------------------------
 # Installs BOTH core tools simultaneously in one execution:
 # 1. Ponytail (Anti-Slop, YAGNI & Minimal Diffs Engineering Rules)
@@ -12,23 +12,52 @@
 
 set -e
 
+# Export local bin to PATH in case pip installs to ~/.local/bin
+export PATH="$HOME/.local/bin:$PATH"
+
 TARGET_DIR="${1:-$(pwd)}"
 cd "$TARGET_DIR"
 
 echo "======================================================================"
 echo "🚀 Provisioning AI Optimization Stack (Ponytail + code-review-graph)"
 echo "   Target Directory: $TARGET_DIR"
+echo "   User: $(whoami) | OS: $(uname -s) $(uname -m)"
 echo "======================================================================"
 
 # ------------------------------------------------------------------------------
 # 1. TOOL 1: Install & Build code-review-graph (Local AST SQLite Knowledge Graph)
 # ------------------------------------------------------------------------------
 echo "📦 [1/2] Setting up 'code-review-graph'..."
+
+# Ensure pip is available
+if ! command -v pip &> /dev/null && ! command -v pip3 &> /dev/null; then
+    if command -v apt-get &> /dev/null; then
+        echo "   ↳ Installing python3-pip..."
+        sudo apt-get update -qq && sudo apt-get install -y -qq python3-pip python3-venv || true
+    fi
+fi
+
+# Install code-review-graph (Handling PEP 668 on modern Linux/Debian/Ubuntu)
 if ! command -v code-review-graph &> /dev/null; then
-    echo "   ↳ Installing 'code-review-graph' CLI via pip..."
-    pip install -q code-review-graph || pip3 install -q code-review-graph
+    echo "   ↳ Installing 'code-review-graph' CLI..."
+    pip install -q code-review-graph 2>/dev/null || \
+    pip3 install -q code-review-graph 2>/dev/null || \
+    pip install -q --break-system-packages code-review-graph 2>/dev/null || \
+    pip3 install -q --break-system-packages code-review-graph 2>/dev/null || \
+    python3 -m pip install -q --break-system-packages code-review-graph 2>/dev/null || \
+    pipx install code-review-graph 2>/dev/null || {
+        echo "❌ Failed to install code-review-graph via pip. Trying python3 -m pip..."
+        python3 -m pip install --break-system-packages code-review-graph
+    }
 else
-    echo "   ↳ 'code-review-graph' CLI is already installed on system."
+    echo "   ↳ 'code-review-graph' CLI is already installed."
+fi
+
+# Ensure executable is accessible
+if ! command -v code-review-graph &> /dev/null; then
+    if [ -f "$HOME/.local/bin/code-review-graph" ]; then
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
 fi
 
 # Initialize Git if not present
@@ -39,15 +68,16 @@ fi
 
 # Build Local AST Graph
 echo "   ↳ Building AST Knowledge Graph (SQLite + FTS5 full-text search)..."
-code-review-graph build
+code-review-graph build || python3 -m code_review_graph build
 
 # Configure Platforms & MCP (Claude Code, Codex, Cursor, etc.)
 echo "   ↳ Configuring MCP servers and Git Pre-commit Hooks..."
-code-review-graph install -y --no-instructions --platform claude-code --platform codex || true
+code-review-graph install -y --no-instructions --platform claude-code --platform codex || \
+python3 -m code_review_graph install -y --no-instructions --platform claude-code --platform codex || true
 
-# Ensure .mcp.json in repo root for all MCP clients
+# Ensure .mcp.json in repo root for all MCP clients (Claude Code, Cursor, Codex, Hermes)
 if [ ! -f ".mcp.json" ]; then
-    cat << 'EOF' > .mcp.json
+    cat << 'MCPEOF' > .mcp.json
 {
   "mcpServers": {
     "code-review-graph": {
@@ -57,7 +87,7 @@ if [ ! -f ".mcp.json" ]; then
     }
   }
 }
-EOF
+MCPEOF
     echo "   ↳ Created .mcp.json for universal MCP client support."
 fi
 
@@ -82,7 +112,7 @@ if [ -d "$HOME/.hermes" ]; then
     mkdir -p "$HOME/.hermes/skills/software-development/ponytail"
     mkdir -p "$HOME/.hermes/skills/software-development/ponytail-audit"
     
-    cat << 'EOF' > "$HOME/.hermes/skills/software-development/ponytail/SKILL.md"
+    cat << 'SKILLEOF' > "$HOME/.hermes/skills/software-development/ponytail/SKILL.md"
 ---
 name: ponytail
 description: Use when writing or editing code. Enforces minimal diffs.
@@ -106,9 +136,9 @@ Stop at the first rung that holds:
 5. Already-installed dependency solves it? Use it.
 6. Can it be one line? One line.
 7. Only then: the minimum code that works.
-EOF
+SKILLEOF
 
-    cat << 'EOF' > "$HOME/.hermes/skills/software-development/ponytail-audit/SKILL.md"
+    cat << 'SKILLEOF' > "$HOME/.hermes/skills/software-development/ponytail-audit/SKILL.md"
 ---
 name: ponytail-audit
 description: Use when auditing codebase for bloat. Lists items to cut.
@@ -118,7 +148,7 @@ license: MIT
 # Ponytail Audit
 
 Whole-repo audit for over-engineering. Scan the whole tree instead of a diff. Rank findings biggest cut first.
-EOF
+SKILLEOF
     echo "   ↳ Provisioned Ponytail skills in Hermes Agent."
 fi
 
